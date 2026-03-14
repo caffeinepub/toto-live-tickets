@@ -1,0 +1,139 @@
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Figtree:ital,wght@0,300..900;1,300..900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0.10 0.012 270;
+    --foreground: 0.95 0.012 85;
+    --card: 0.14 0.015 265;
+    --card-foreground: 0.95 0.012 85;
+    --popover: 0.14 0.015 265;
+    --popover-foreground: 0.95 0.012 85;
+    --primary: 0.85 0.20 95;
+    --primary-foreground: 0.10 0.012 270;
+    --secondary: 0.70 0.18 50;
+    --secondary-foreground: 0.10 0.012 270;
+    --muted: 0.20 0.018 265;
+    --muted-foreground: 0.55 0.025 270;
+    --accent: 0.22 0.025 265;
+    --accent-foreground: 0.95 0.012 85;
+    --destructive: 0.60 0.22 25;
+    --destructive-foreground: 0.98 0.005 0;
+    --border: 0.24 0.025 265;
+    --input: 0.24 0.025 265;
+    --ring: 0.85 0.20 95;
+    --radius: 0.5rem;
+    --chart-1: 0.85 0.20 95;
+    --chart-2: 0.70 0.18 50;
+    --chart-3: 0.60 0.22 25;
+    --chart-4: 0.55 0.18 180;
+    --chart-5: 0.65 0.15 290;
+    --sidebar: 0.12 0.015 265;
+    --sidebar-foreground: 0.95 0.012 85;
+    --sidebar-primary: 0.85 0.20 95;
+    --sidebar-primary-foreground: 0.10 0.012 270;
+    --sidebar-accent: 0.20 0.018 265;
+    --sidebar-accent-foreground: 0.95 0.012 85;
+    --sidebar-border: 0.22 0.022 265;
+    --sidebar-ring: 0.85 0.20 95;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-body;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+}
+
+/* Ticket perforation border */
+.ticket-perf {
+  position: relative;
+}
+.ticket-perf::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -1px;
+  bottom: -1px;
+  transform: translateX(-50%);
+  width: 2px;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 6px,
+    oklch(var(--border)) 6px,
+    oklch(var(--border)) 12px
+  );
+}
+
+@media (max-width: 640px) {
+  .ticket-perf::before {
+    left: -1px;
+    right: -1px;
+    top: 50%;
+    bottom: auto;
+    width: auto;
+    height: 2px;
+    transform: translateY(-50%);
+    background-image: repeating-linear-gradient(
+      to right,
+      transparent 0px,
+      transparent 6px,
+      oklch(var(--border)) 6px,
+      oklch(var(--border)) 12px
+    );
+  }
+}
+
+/* Print styles */
+@media print {
+  body > * {
+    display: none !important;
+  }
+  [data-print-ticket] {
+    display: block !important;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 99999;
+    background: white;
+    color: black;
+    padding: 20px;
+  }
+  [data-print-ticket] * {
+    color: black !important;
+    background: white !important;
+    border-color: #ccc !important;
+  }
+}
+
+.noise-overlay {
+  position: relative;
+}
+.noise-overlay::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  opacity: 0.4;
+  mix-blend-mode: overlay;
+}
+
+.spotlight-bg {
+  background:
+    radial-gradient(ellipse 60% 40% at 30% 0%, oklch(0.85 0.20 95 / 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 30% at 70% 0%, oklch(0.70 0.18 50 / 0.06) 0%, transparent 50%),
+    oklch(var(--background));
+}
