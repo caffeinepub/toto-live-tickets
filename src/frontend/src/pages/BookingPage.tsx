@@ -61,7 +61,11 @@ export default function BookingPage() {
       navigate({ to: `/pay/${bookingId}` });
     } catch (err) {
       console.error("Booking error:", err);
-      toast.error("Failed to create booking. Please try again.");
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Failed to create booking. Please try again.",
+      );
     }
   };
 

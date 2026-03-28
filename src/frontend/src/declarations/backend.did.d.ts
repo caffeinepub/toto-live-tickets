@@ -31,16 +31,14 @@ export interface _SERVICE {
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   'checkInBooking' : ActorMethod<[string], boolean>,
-  'createBooking' : ActorMethod<
-    [string, string, string, string, [] | [bigint]],
-    string
-  >,
+  'createBooking' : ActorMethod<[string, string, string, bigint], string>,
   'getAllBookings' : ActorMethod<[], Array<Booking>>,
   'getBooking' : ActorMethod<[string], Booking>,
   'getBookingsByPaymentStatus' : ActorMethod<[PaymentStatus], Array<Booking>>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'searchBookings' : ActorMethod<[string], Array<Booking>>,
+  'submitUpiTxnId' : ActorMethod<[string, string], undefined>,
   'updatePaymentStatus' : ActorMethod<[string, PaymentStatus], undefined>,
 }
 export declare const idlService: IDL.ServiceClass;

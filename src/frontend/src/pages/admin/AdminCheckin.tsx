@@ -16,14 +16,34 @@ import {
   Search,
   XCircle,
 } from "lucide-react";
-import { motion } from "motion/react";
-import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { PaymentStatus } from "../../backend.d";
+
+/** Extract booking ID from either a raw ID or a URL like https://example.com/ticket/BOOKING_ID */
+function extractBookingId(raw: string): string {
+  const trimmed = raw.trim();
+  try {
+    const url = new URL(trimmed);
+    const parts = url.pathname.split("/");
+    const ticketIdx = parts.indexOf("ticket");
+    if (ticketIdx !== -1 && parts[ticketIdx + 1]) {
+      return parts[ticketIdx + 1];
+    }
+    // Fall back to last path segment
+    const last = parts.filter(Boolean).pop();
+    if (last) return last;
+  } catch {
+    // Not a URL, use as-is
+  }
+  return trimmed;
+}
 
 function ManualCheckin() {
   const [bookingId, setBookingId] = useState("");
   const [lookupId, setLookupId] = useState("");
+  const [checkedInName, setCheckedInName] = useState("");
   const { data: booking, isLoading, isError } = useGetBooking(lookupId);
   const checkIn = useCheckInBooking();
 
@@ -33,7 +53,8 @@ function ManualCheckin() {
       toast.error("Enter a booking ID");
       return;
     }
-    setLookupId(bookingId.trim());
+    setCheckedInName("");
+    setLookupId(extractBookingId(bookingId));
   };
 
   const handleCheckIn = async () => {
@@ -49,6 +70,7 @@ function ManualCheckin() {
     try {
       const result = await checkIn.mutateAsync(booking.bookingId);
       if (result) {
+        setCheckedInName(booking.name);
         toast.success(`✅ ${booking.name} checked in successfully!`);
       } else {
         toast.error("Check-in failed. Please try again.");
@@ -56,6 +78,12 @@ function ManualCheckin() {
     } catch {
       toast.error("Check-in failed. Please try again.");
     }
+  };
+
+  const handleCheckAnother = () => {
+    setBookingId("");
+    setLookupId("");
+    setCheckedInName("");
   };
 
   return (
@@ -104,7 +132,41 @@ function ManualCheckin() {
         </Card>
       )}
 
-      {booking && !isError && (
+      <AnimatePresence>
+        {checkedInName && (
+          <motion.div
+            key="success-banner"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="w-6 h-6 text-green-400 shrink-0" />
+                <div>
+                  <p className="text-green-400 font-bold">
+                    {checkedInName} — Checked In!
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    Check-in recorded successfully.
+                  </p>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleCheckAnother}
+                className="border-green-500/30 text-green-400 hover:bg-green-500/10 shrink-0"
+                data-ocid="checkin.secondary_button"
+              >
+                Check In Another
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {booking && !isError && !checkedInName && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -170,6 +232,16 @@ function ManualCheckin() {
                     {booking.paymentStatus}
                   </p>
                 </div>
+                {booking.upiTxnId && (
+                  <div className="col-span-2">
+                    <Label className="text-muted-foreground text-xs uppercase">
+                      UPI Txn ID
+                    </Label>
+                    <p className="text-foreground font-mono text-sm break-all">
+                      {booking.upiTxnId}
+                    </p>
+                  </div>
+                )}
               </div>
 
               {!booking.checkedIn &&
@@ -215,6 +287,8 @@ function ManualCheckin() {
 function QRCheckin() {
   const [lastScannedId, setLastScannedId] = useState("");
   const [processedIds, setProcessedIds] = useState<Set<string>>(new Set());
+  const [showSuccess, setShowSuccess] = useState(false);
+  const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const checkIn = useCheckInBooking();
   const { data: booking, isLoading } = useGetBooking(lastScannedId);
 
@@ -238,11 +312,18 @@ function QRCheckin() {
     maxResults: 3,
   });
 
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+    };
+  }, []);
+
   // Process latest QR scan
   useEffect(() => {
     if (qrResults.length === 0) return;
     const latest = qrResults[0];
-    const scannedId = latest.data.trim();
+    const scannedId = extractBookingId(latest.data);
     if (!processedIds.has(scannedId)) {
       setLastScannedId(scannedId);
     }
@@ -262,9 +343,14 @@ function QRCheckin() {
       const result = await checkIn.mutateAsync(booking.bookingId);
       if (result) {
         toast.success(`✅ ${booking.name} checked in!`);
+        setShowSuccess(true);
         setProcessedIds((prev) => new Set([...prev, lastScannedId]));
         clearResults();
-        setLastScannedId("");
+        // Auto-reset after 2 seconds so scanner is ready for next guest
+        resetTimerRef.current = setTimeout(() => {
+          setLastScannedId("");
+          setShowSuccess(false);
+        }, 2000);
       }
     } catch {
       toast.error("Check-in failed.");
@@ -306,6 +392,24 @@ function QRCheckin() {
             <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-primary" />
           </div>
         )}
+        {/* Success overlay */}
+        <AnimatePresence>
+          {showSuccess && (
+            <motion.div
+              key="success-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-green-500/40 flex items-center justify-center"
+              data-ocid="checkin.success_state"
+            >
+              <div className="text-center">
+                <CheckCircle className="w-16 h-16 text-white mx-auto mb-2" />
+                <p className="text-white font-bold text-lg">Checked In!</p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {error && (
@@ -369,7 +473,7 @@ function QRCheckin() {
         </div>
       )}
 
-      {booking && lastScannedId && !isLoading && (
+      {booking && lastScannedId && !isLoading && !showSuccess && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -409,6 +513,12 @@ function QRCheckin() {
                   {booking.ticketCount.toString()} ticket
                   {Number(booking.ticketCount) !== 1 ? "s" : ""}
                 </span>
+                {booking.upiTxnId && (
+                  <span className="text-muted-foreground font-mono text-xs">
+                    UPI: {booking.upiTxnId.slice(0, 12)}
+                    {booking.upiTxnId.length > 12 ? "…" : ""}
+                  </span>
+                )}
                 {booking.checkedIn && (
                   <span className="text-green-400 font-semibold">
                     ✅ Already checked in
@@ -463,15 +573,8 @@ export default function AdminCheckin() {
         </p>
       </div>
 
-      <Tabs defaultValue="manual">
+      <Tabs defaultValue="qr">
         <TabsList className="bg-card border border-border">
-          <TabsTrigger
-            value="manual"
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-            data-ocid="checkin.tab"
-          >
-            <Search className="mr-2 w-4 h-4" /> Manual
-          </TabsTrigger>
           <TabsTrigger
             value="qr"
             className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
@@ -479,12 +582,19 @@ export default function AdminCheckin() {
           >
             <QrCode className="mr-2 w-4 h-4" /> QR Scanner
           </TabsTrigger>
+          <TabsTrigger
+            value="manual"
+            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            data-ocid="checkin.tab"
+          >
+            <Search className="mr-2 w-4 h-4" /> Manual
+          </TabsTrigger>
         </TabsList>
-        <TabsContent value="manual" className="mt-6">
-          <ManualCheckin />
-        </TabsContent>
         <TabsContent value="qr" className="mt-6">
           <QRCheckin />
+        </TabsContent>
+        <TabsContent value="manual" className="mt-6">
+          <ManualCheckin />
         </TabsContent>
       </Tabs>
     </div>

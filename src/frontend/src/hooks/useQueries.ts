@@ -65,12 +65,27 @@ export function useCreateBooking() {
         data.name,
         data.email,
         data.phone,
-        "",
         BigInt(data.ticketCount),
       );
     },
   });
   return { ...mutation, isActorReady: !!actor && !isFetching };
+}
+
+export function useSubmitUpiTxnId() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { bookingId: string; upiTxnId: string }) => {
+      if (!actor) throw new Error("Actor not available");
+      return actor.submitUpiTxnId(data.bookingId, data.upiTxnId);
+    },
+    onSuccess: (_result, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["booking", variables.bookingId],
+      });
+    },
+  });
 }
 
 export function useUpdatePaymentStatus() {
@@ -95,8 +110,9 @@ export function useCheckInBooking() {
       if (!actor) throw new Error("Actor not available");
       return actor.checkInBooking(bookingId);
     },
-    onSuccess: () => {
+    onSuccess: (_result, bookingId) => {
       queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["booking", bookingId] });
     },
   });
 }

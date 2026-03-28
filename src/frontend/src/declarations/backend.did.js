@@ -35,7 +35,7 @@ export const idlService = IDL.Service({
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
   'checkInBooking' : IDL.Func([IDL.Text], [IDL.Bool], []),
   'createBooking' : IDL.Func(
-      [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Opt(IDL.Nat)],
+      [IDL.Text, IDL.Text, IDL.Text, IDL.Nat],
       [IDL.Text],
       [],
     ),
@@ -49,6 +49,7 @@ export const idlService = IDL.Service({
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'searchBookings' : IDL.Func([IDL.Text], [IDL.Vec(Booking)], ['query']),
+  'submitUpiTxnId' : IDL.Func([IDL.Text, IDL.Text], [], []),
   'updatePaymentStatus' : IDL.Func([IDL.Text, PaymentStatus], [], []),
 });
 
@@ -82,7 +83,7 @@ export const idlFactory = ({ IDL }) => {
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
     'checkInBooking' : IDL.Func([IDL.Text], [IDL.Bool], []),
     'createBooking' : IDL.Func(
-        [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Opt(IDL.Nat)],
+        [IDL.Text, IDL.Text, IDL.Text, IDL.Nat],
         [IDL.Text],
         [],
       ),
@@ -96,6 +97,7 @@ export const idlFactory = ({ IDL }) => {
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'searchBookings' : IDL.Func([IDL.Text], [IDL.Vec(Booking)], ['query']),
+    'submitUpiTxnId' : IDL.Func([IDL.Text, IDL.Text], [], []),
     'updatePaymentStatus' : IDL.Func([IDL.Text, PaymentStatus], [], []),
   });
 };

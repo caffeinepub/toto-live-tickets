@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { useGetBooking } from "@/hooks/useQueries";
+import { useGetBooking, useSubmitUpiTxnId } from "@/hooks/useQueries";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import {
   AlertCircle,
@@ -42,10 +42,10 @@ export default function PaymentPage() {
   const { bookingId } = useParams({ from: "/pay/$bookingId" });
   const [txnId, setTxnId] = useState("");
   const [submitted, setSubmitted] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const { data: booking, isLoading: bookingLoading } = useGetBooking(bookingId);
+  const submitUpiTxnId = useSubmitUpiTxnId();
 
   const ticketCount = booking ? Number(booking.ticketCount) : 1;
   const amount = booking ? calcTotal(ticketCount) : "108.90";
@@ -64,11 +64,16 @@ export default function PaymentPage() {
       toast.error("Please enter your UPI Transaction ID");
       return;
     }
-    setSubmitting(true);
-    await new Promise((r) => setTimeout(r, 1200));
-    setSubmitting(false);
-    setSubmitted(true);
+    try {
+      await submitUpiTxnId.mutateAsync({ bookingId, upiTxnId: txnId });
+      setSubmitted(true);
+    } catch (err) {
+      console.error("Submit UPI txn error:", err);
+      toast.error("Failed to submit payment. Please try again.");
+    }
   };
+
+  const submitting = submitUpiTxnId.isPending;
 
   if (submitted) {
     return (

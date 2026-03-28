@@ -10,10 +10,13 @@ import AdminLayout from "@/pages/admin/AdminLayout";
 import {
   Outlet,
   RouterProvider,
+  createHashHistory,
   createRootRoute,
   createRoute,
   createRouter,
 } from "@tanstack/react-router";
+
+const hashHistory = createHashHistory();
 
 const rootRoute = createRootRoute({
   component: () => (
@@ -84,7 +87,7 @@ const routeTree = rootRoute.addChildren([
   ]),
 ]);
 
-const router = createRouter({ routeTree });
+const router = createRouter({ routeTree, history: hashHistory });
 
 declare module "@tanstack/react-router" {
   interface Register {

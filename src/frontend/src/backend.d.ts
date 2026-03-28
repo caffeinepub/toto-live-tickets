@@ -31,12 +31,13 @@ export enum UserRole {
 export interface backendInterface {
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     checkInBooking(bookingId: string): Promise<boolean>;
-    createBooking(name: string, email: string, phone: string, upiTxnId: string, ticketCount: bigint | null): Promise<string>;
+    createBooking(name: string, email: string, phone: string, ticketCount: bigint): Promise<string>;
     getAllBookings(): Promise<Array<Booking>>;
     getBooking(bookingId: string): Promise<Booking>;
     getBookingsByPaymentStatus(status: PaymentStatus): Promise<Array<Booking>>;
     getCallerUserRole(): Promise<UserRole>;
     isCallerAdmin(): Promise<boolean>;
     searchBookings(searchTerm: string): Promise<Array<Booking>>;
+    submitUpiTxnId(bookingId: string, upiTxnId: string): Promise<void>;
     updatePaymentStatus(bookingId: string, status: PaymentStatus): Promise<void>;
 }

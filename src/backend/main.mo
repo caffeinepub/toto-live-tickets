@@ -1,12 +1,13 @@
 import Time "mo:core/Time";
 import Text "mo:core/Text";
-import Map "mo:core/Map";
+import Int "mo:core/Int";
 import Array "mo:core/Array";
 import Runtime "mo:core/Runtime";
-import Iter "mo:core/Iter";
 import Order "mo:core/Order";
+
 import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
+
 
 actor {
   let accessControlState = AccessControl.initState();
@@ -58,7 +59,7 @@ actor {
     };
   };
 
-  let bookings = Map.empty<Text, Booking>();
+  var bookings : [Booking] = [];
   var bookingCounter = 0;
 
   func generateBookingId() : Text {
@@ -79,15 +80,14 @@ actor {
     name : Text,
     email : Text,
     phone : Text,
-    upiTxnId : Text,
-    ticketCount : Nat
+    ticketCount : Nat,
   ) : Booking {
     {
       bookingId = generateBookingId();
       name;
       email;
       phone;
-      upiTxnId;
+      upiTxnId = "";
       paymentStatus = #pending;
       checkedIn = false;
       createdAt = Time.now();
@@ -97,7 +97,7 @@ actor {
 
   func filterBookings(searchTerm : Text) : [Booking] {
     let term = searchTerm.toLower();
-    bookings.values().toArray().filter(
+    bookings.filter(
       func(booking) {
         booking.bookingId.toLower().contains(#text term) or
         booking.name.toLower().contains(#text term) or
@@ -110,32 +110,20 @@ actor {
     name : Text,
     email : Text,
     phone : Text,
-    upiTxnId : Text,
-    ticketCount : ?Nat,
+    ticketCount : Nat,
   ) : async Text {
-    let count = switch (ticketCount) {
-      case (null) {
-        1;
-      };
-      case (?value) {
-        value;
-      };
-    };
-
     let booking = createBookingInternal(
       name,
       email,
       phone,
-      upiTxnId,
-      count,
+      ticketCount,
     );
-
-    bookings.add(booking.bookingId, booking);
+    bookings := bookings.concat([booking]);
     booking.bookingId;
   };
 
   public query ({ caller }) func getBooking(bookingId : Text) : async Booking {
-    switch (bookings.get(bookingId)) {
+    switch (bookings.find(func(b : Booking) : Bool { b.bookingId == bookingId })) {
       case (null) { Runtime.trap("Booking not found") };
       case (?booking) { booking };
     };
@@ -145,62 +133,79 @@ actor {
     if (not (AccessControl.isAdmin(accessControlState, caller))) {
       Runtime.trap("Unauthorized: Only admins can view all bookings");
     };
-    bookings.values().toArray();
+    bookings;
   };
 
   public shared ({ caller }) func updatePaymentStatus(bookingId : Text, status : PaymentStatus) : async () {
     if (not (AccessControl.isAdmin(accessControlState, caller))) {
       Runtime.trap("Unauthorized: Only admins can update payment status");
     };
+    var found = false;
+    let updatedBookings = bookings.map(
+      func(b : Booking) : Booking {
+        if (b.bookingId == bookingId) {
+          found := true;
+          { b with paymentStatus = status };
+        } else { b };
+      }
+    );
+    if (not found) { Runtime.trap("Booking not found") };
+    bookings := updatedBookings;
+  };
 
-    switch (bookings.get(bookingId)) {
-      case (null) { Runtime.trap("Booking not found") };
-      case (?booking) {
-        let updatedBooking = {
-          booking with
-          paymentStatus = status;
-        };
-        bookings.add(bookingId, updatedBooking);
-      };
-    };
+  public shared ({ caller }) func submitUpiTxnId(bookingId : Text, upiTxnId : Text) : async () {
+    var found = false;
+    let updatedBookings = bookings.map(
+      func(b : Booking) : Booking {
+        if (b.bookingId == bookingId) {
+          found := true;
+          { b with upiTxnId = upiTxnId };
+        } else { b };
+      }
+    );
+    if (not found) { Runtime.trap("Booking not found") };
+    bookings := updatedBookings;
   };
 
   public shared ({ caller }) func checkInBooking(bookingId : Text) : async Bool {
     if (not (AccessControl.isAdmin(accessControlState, caller))) {
       Runtime.trap("Unauthorized: Only admins can check in bookings");
     };
-
-    switch (bookings.get(bookingId)) {
-      case (null) { false };
-      case (?booking) {
-        if (booking.checkedIn) { return false };
-        let updatedBooking = {
-          booking with
-          checkedIn = true;
-        };
-        bookings.add(bookingId, updatedBooking);
-        true;
-      };
-    };
+    var found = false;
+    var alreadyCheckedIn = false;
+    let updatedBookings = bookings.map(
+      func(b : Booking) : Booking {
+        if (b.bookingId == bookingId) {
+          found := true;
+          if (b.checkedIn) {
+            alreadyCheckedIn := true;
+            b;
+          } else {
+            { b with checkedIn = true };
+          };
+        } else { b };
+      }
+    );
+    if (not found) { Runtime.trap("Booking not found") };
+    bookings := updatedBookings;
+    not alreadyCheckedIn;
   };
 
   public query ({ caller }) func searchBookings(searchTerm : Text) : async [Booking] {
     if (not (AccessControl.isAdmin(accessControlState, caller))) {
       Runtime.trap("Unauthorized: Only admins can search bookings");
     };
-    let filtered = filterBookings(searchTerm);
-    filtered.sort(Booking.compareByCreatedAt);
+    filterBookings(searchTerm).sort(Booking.compareByCreatedAt);
   };
 
   public query ({ caller }) func getBookingsByPaymentStatus(status : PaymentStatus) : async [Booking] {
     if (not (AccessControl.isAdmin(accessControlState, caller))) {
       Runtime.trap("Unauthorized: Only admins can filter bookings by payment status");
     };
-    let filtered = bookings.values().toArray().filter(
-      func(booking) {
+    bookings.filter(
+      func(booking : Booking) : Bool {
         booking.paymentStatus == status;
       }
-    );
-    filtered.sort(Booking.compareByCreatedAtAscending);
+    ).sort(Booking.compareByCreatedAtAscending);
   };
 };

@@ -4,6 +4,7 @@ import { useGetAllBookings } from "@/hooks/useQueries";
 import {
   CheckCircle,
   Clock,
+  IndianRupee,
   Ticket,
   TrendingUp,
   Users,
@@ -90,13 +91,21 @@ export default function AdminDashboard() {
       color: "text-secondary",
       bg: "bg-secondary/10",
     },
+    {
+      label: "Revenue",
+      value: stats ? `₹${stats.totalRevenue.toFixed(0)}` : "₹0",
+      icon: IndianRupee,
+      color: "text-green-400",
+      bg: "bg-green-400/10",
+      isRevenue: true,
+    },
   ];
 
   if (isLoading) {
     return (
       <div className="space-y-4" data-ocid="dashboard.loading_state">
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
+          {Array.from({ length: 7 }).map((_, i) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: loading skeletons are positional
             <Skeleton key={i} className="h-28" />
           ))}
@@ -116,7 +125,7 @@ export default function AdminDashboard() {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
         {statCards.map((card, i) => (
           <motion.div
             key={card.label}
@@ -144,25 +153,6 @@ export default function AdminDashboard() {
           </motion.div>
         ))}
       </div>
-
-      {stats && (
-        <Card className="bg-card border-border">
-          <CardHeader>
-            <CardTitle className="font-display text-lg text-foreground">
-              Revenue (Confirmed)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="font-display font-black text-4xl text-primary">
-              ₹{stats.totalRevenue.toFixed(2)}
-            </p>
-            <p className="text-muted-foreground text-sm mt-1">
-              From {stats.confirmed} confirmed booking
-              {stats.confirmed !== 1 ? "s" : ""}
-            </p>
-          </CardContent>
-        </Card>
-      )}
 
       {bookings && bookings.length === 0 && (
         <Card className="bg-card border-border">
